@@ -83,6 +83,7 @@ from dotenv import load_dotenv
 import base64
 from pathlib import Path as _Path
 from django.core.exceptions import ImproperlyConfigured
+from typing import Any, cast
 
 load_dotenv()
 
@@ -127,7 +128,7 @@ if _db_require_tls:
         )
     # mysqlclient (MySQLdb) accepts an 'ssl' dict with 'ca' key
     DATABASES['default'].setdefault('OPTIONS', {})
-    DATABASES['default']['OPTIONS']['ssl'] = {'ca': _db_ca_path}
+    DATABASES['default']['OPTIONS']['ssl'] = cast(Any, {'ca': _db_ca_path})
 
 
 # Password validation
