@@ -80,8 +80,28 @@ WSGI_APPLICATION = 'booking_backend.wsgi.application'
 
 import os
 from dotenv import load_dotenv
+import base64
+from pathlib import Path as _Path
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
+
+# Helper: determine whether TLS is required
+_db_require_tls = os.getenv('DB_REQUIRE_TLS', 'False').lower() in ('1', 'true', 'yes')
+
+# If user provided a base64-encoded CA certificate, write it to a file for the connector
+_db_ca_path = os.getenv('DB_SSL_CA_PATH')
+_db_ca_b64 = os.getenv('DB_SSL_CA_BASE64')
+if _db_require_tls and _db_ca_b64 and not _db_ca_path:
+    # create a certs directory inside BASE_DIR to persist the decoded CA during runtime
+    _ssl_dir = _Path(BASE_DIR) / 'ssl_certs'
+    try:
+        _ssl_dir.mkdir(parents=True, exist_ok=True)
+        _db_ca_path = str(_ssl_dir / 'db_ca.pem')
+        with open(_db_ca_path, 'wb') as _f:
+            _f.write(base64.b64decode(_db_ca_b64))
+    except Exception as _e:
+        raise ImproperlyConfigured(f"Failed to write DB SSL CA file: {_e}")
 
 DATABASES = {
     'default': {
@@ -96,6 +116,18 @@ DATABASES = {
         }
     }
 }
+
+# If TLS is required, ensure we have a CA path and set the 'ssl' OPTIONS for MySQL connector
+if _db_require_tls:
+    if not _db_ca_path:
+        # No CA provided: fail early with an explicit message to avoid ambiguous connection errors
+        raise ImproperlyConfigured(
+            'DB_REQUIRE_TLS is set but no DB_SSL_CA_PATH or DB_SSL_CA_BASE64 was provided. '
+            'Provide the CA (DB_SSL_CA_PATH) or base64-encoded CA (DB_SSL_CA_BASE64) in env.'
+        )
+    # mysqlclient (MySQLdb) accepts an 'ssl' dict with 'ca' key
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['ssl'] = {'ca': _db_ca_path}
 
 
 # Password validation
@@ -227,6 +259,3 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
-
-
-
