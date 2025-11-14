@@ -1,0 +1,466 @@
+{
+  "info": {
+    "name": "Booking Backend API",
+    "description": "Collection per testare l'API di prenotazioni B&Bosio",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"password_confirm\": \"password123\",\n  \"display_name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/",
+              "host": ["{{base_url}}"],
+              "path": ["users", ""]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access);",
+                  "pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set(\"access_token\", jsonData.access);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me/",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update_profile/",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update_profile", ""]
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/my_bookings/",
+              "host": ["{{base_url}}"],
+              "path": ["users", "my_bookings", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accommodations",
+      "item": [
+        {
+          "name": "List Accommodations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accommodations/",
+              "host": ["{{base_url}}"],
+              "path": ["accommodations", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Accommodation by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accommodations/villa-mare/",
+              "host": ["{{base_url}}"],
+              "path": ["accommodations", "villa-mare", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Accommodation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"villa-mare\",\n  \"title\": \"Villa al Mare\",\n  \"description\": \"Bellissima villa con vista mare\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/accommodations/",
+              "host": ["{{base_url}}"],
+              "path": ["accommodations", ""]
+            }
+          }
+        },
+        {
+          "name": "Check Availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accommodations/villa-mare/availability/?check_in=2024-03-01T14:00:00Z&check_out=2024-03-05T10:00:00Z",
+              "host": ["{{base_url}}"],
+              "path": ["accommodations", "villa-mare", "availability", ""],
+              "query": [
+                {
+                  "key": "check_in",
+                  "value": "2024-03-01T14:00:00Z"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2024-03-05T10:00:00Z"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "List Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accommodation\": 1,\n  \"check_in\": \"2024-03-01T14:00:00Z\",\n  \"check_out\": \"2024-03-05T10:00:00Z\",\n  \"num_guests\": 2,\n  \"notes\": \"Test booking\",\n  \"guests_data\": [\n    {\n      \"full_name\": \"Mario Rossi\",\n      \"email\": \"mario@example.com\",\n      \"phone\": \"+39 123 456 7890\",\n      \"birth_date\": \"1980-01-01\",\n      \"document_type\": \"Carta d'Identità\",\n      \"document_number\": \"AB1234567\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bookings/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/1/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/1/confirm/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1", "confirm", ""]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/1/cancel/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1", "cancel", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Audit Log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/bookings/1/audit_log/",
+              "host": ["{{base_url}}"],
+              "path": ["bookings", "1", "audit_log", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blocked Periods",
+      "item": [
+        {
+          "name": "List Blocked Periods",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blocked-periods/?accommodation=1",
+              "host": ["{{base_url}}"],
+              "path": ["blocked-periods", ""],
+              "query": [
+                {
+                  "key": "accommodation",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Blocked Period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accommodation\": 1,\n  \"start_date\": \"2024-04-01T00:00:00Z\",\n  \"end_date\": \"2024-04-15T23:59:59Z\",\n  \"reason\": \"Manutenzione\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/blocked-periods/",
+              "host": ["{{base_url}}"],
+              "path": ["blocked-periods", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utilities",
+      "item": [
+        {
+          "name": "Check Availability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accommodation_id\": 1,\n  \"check_in\": \"2024-03-01T14:00:00Z\",\n  \"check_out\": \"2024-03-05T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/check-availability/",
+              "host": ["{{base_url}}"],
+              "path": ["check-availability", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/statistics/",
+              "host": ["{{base_url}}"],
+              "path": ["statistics", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

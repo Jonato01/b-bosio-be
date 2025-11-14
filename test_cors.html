@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CORS - B&Bosio Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test CORS - Backend B&Bosio</h1>
+
+        <p>Questo strumento ti permette di testare se il backend Django risponde correttamente alle richieste CORS dal frontend.</p>
+
+        <h2>1. Test Base (senza autenticazione)</h2>
+        <button onclick="testStatistics()">Test /api/statistics/</button>
+        <button onclick="testRoles()">Test /api/roles/</button>
+        <button onclick="testAccommodations()">Test /api/accommodations/</button>
+
+        <h2>2. Test con Autenticazione</h2>
+        <label for="token">Access Token JWT:</label>
+        <input type="text" id="token" placeholder="Incolla qui il tuo access token...">
+        <button onclick="testMyProfile()">Test /api/users/me/</button>
+        <button onclick="testMyBookings()">Test /api/users/my_bookings/</button>
+
+        <h2>3. Risultato</h2>
+        <div id="result" class="result info">Clicca su un pulsante per testare...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+        }
+
+        async function testStatistics() {
+            showResult('⏳ Testing /api/statistics/...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/statistics/`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                showResult(`✅ SUCCESS!\n\nRisposta:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}\n\nDettagli:\n${error.stack}`, 'error');
+            }
+        }
+
+        async function testRoles() {
+            showResult('⏳ Testing /api/roles/...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/roles/`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                showResult(`✅ SUCCESS!\n\nRisposta:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}\n\nDettagli:\n${error.stack}`, 'error');
+            }
+        }
+
+        async function testAccommodations() {
+            showResult('⏳ Testing /api/accommodations/...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/accommodations/`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                showResult(`✅ SUCCESS!\n\nRisposta:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}\n\nDettagli:\n${error.stack}`, 'error');
+            }
+        }
+
+        async function testMyProfile() {
+            const token = document.getElementById('token').value.trim();
+
+            if (!token) {
+                showResult('❌ ERROR!\n\nDevi inserire un access token!', 'error');
+                return;
+            }
+
+            showResult('⏳ Testing /api/users/me/...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/users/me/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData || response.statusText)}`);
+                }
+
+                const data = await response.json();
+                showResult(`✅ SUCCESS!\n\nRisposta:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}\n\nVerifica che:\n1. Il token sia valido\n2. Il server sia in esecuzione\n3. L'utente esista`, 'error');
+            }
+        }
+
+        async function testMyBookings() {
+            const token = document.getElementById('token').value.trim();
+
+            if (!token) {
+                showResult('❌ ERROR!\n\nDevi inserire un access token!', 'error');
+                return;
+            }
+
+            showResult('⏳ Testing /api/users/my_bookings/...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/users/my_bookings/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData || response.statusText)}`);
+                }
+
+                const data = await response.json();
+                showResult(`✅ SUCCESS!\n\nRisposta:\n${JSON.stringify(data, null, 2)}`, 'success');
+            } catch (error) {
+                showResult(`❌ ERROR!\n\n${error.message}\n\nVerifica che:\n1. Il token sia valido\n2. Il server sia in esecuzione\n3. L'utente esista`, 'error');
+            }
+        }
+
+        // Test automatico all'apertura
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                showResult('Pronto per i test!\n\nClicca su "Test /api/statistics/" per iniziare.', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
