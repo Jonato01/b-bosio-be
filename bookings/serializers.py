@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from .models import (
     User, Role, Accommodation, Booking, BookingGuest,
-    BlockedPeriod, BlockedWeekday, BookingAudit
+    BlockedPeriod, BlockedWeekday, BookingAudit,
+    PaidService, Photo, Review
 )
+from django.db.models import Avg
 from django.contrib.auth.hashers import make_password
 
 
@@ -62,11 +64,52 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
+class PaidServiceSerializer(serializers.ModelSerializer):
+    accommodation_title = serializers.CharField(source='accommodation.title', read_only=True)
+
+    class Meta:
+        model = PaidService
+        fields = ['id', 'accommodation', 'accommodation_title', 'name',
+                  'description', 'price', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class PhotoSerializer(serializers.ModelSerializer):
+    accommodation_title = serializers.CharField(source='accommodation.title', read_only=True)
+    uploaded_by_email = serializers.CharField(source='uploaded_by.email', read_only=True, default=None)
+
+    class Meta:
+        model = Photo
+        fields = ['id', 'accommodation', 'accommodation_title', 'uploaded_by',
+                  'uploaded_by_email', 'url', 'upload_type', 'caption', 'created_at']
+        read_only_fields = ['id', 'url', 'uploaded_by', 'created_at']
+
+
+class PhotoUploadSerializer(serializers.Serializer):
+    accommodation = serializers.IntegerField()
+    upload_type = serializers.ChoiceField(choices=['accommodation', 'review'], default='accommodation')
+    caption = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    file = serializers.ImageField()
+
+
 class AccommodationSerializer(serializers.ModelSerializer):
+    paid_services = PaidServiceSerializer(many=True, read_only=True)
+    photos = PhotoSerializer(many=True, read_only=True)
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Accommodation
-        fields = ['id', 'slug', 'title', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'slug', 'title', 'description', 'created_at', 'updated_at',
+                  'paid_services', 'photos', 'average_rating', 'review_count']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_average_rating(self, obj):
+        result = Review.objects.filter(accommodation=obj).aggregate(avg=Avg('rating'))
+        return round(result['avg'], 1) if result['avg'] else None
+
+    def get_review_count(self, obj):
+        return Review.objects.filter(accommodation=obj).count()
 
 
 class BookingGuestSerializer(serializers.ModelSerializer):
@@ -86,7 +129,7 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = ['id', 'accommodation', 'accommodation_title', 'user', 'user_email',
                   'check_in', 'check_out', 'num_guests', 'status', 'notes',
-                  'created_at', 'updated_at', 'guests_details']
+                  'selected_services', 'created_at', 'updated_at', 'guests_details']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, attrs):
@@ -132,7 +175,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = ['accommodation', 'user', 'check_in', 'check_out',
-                  'num_guests', 'notes', 'guests_data']
+                  'num_guests', 'notes', 'selected_services', 'guests_data']
 
     def validate(self, attrs):
         if attrs['check_out'] <= attrs['check_in']:
@@ -225,6 +268,57 @@ class BookingAuditSerializer(serializers.ModelSerializer):
         fields = ['id', 'booking', 'action', 'actor_user', 'actor_user_email',
                   'data_json', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    accommodation_title = serializers.CharField(source='accommodation.title', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True, default=None)
+    user_display_name = serializers.CharField(source='user.display_name', read_only=True, default=None)
+    photos = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = ['id', 'accommodation', 'accommodation_title', 'booking',
+                  'user', 'user_email', 'user_display_name', 'rating',
+                  'comment', 'photos', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'accommodation', 'created_at', 'updated_at']
+
+    def get_photos(self, obj):
+        photos = Photo.objects.filter(
+            accommodation=obj.accommodation,
+            uploaded_by=obj.user,
+            upload_type='review'
+        )
+        return PhotoSerializer(photos, many=True).data
+
+
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['booking', 'rating', 'comment']
+
+    def validate_rating(self, value):
+        if value < 0 or value > 5:
+            raise serializers.ValidationError("Il voto deve essere tra 0 e 5")
+        return value
+
+    def validate_booking(self, value):
+        user = self.context['request'].user
+        if value.user != user:
+            raise serializers.ValidationError("Puoi recensire solo le tue prenotazioni")
+        if value.status != 'confirmed':
+            raise serializers.ValidationError("Solo prenotazioni confermate possono essere recensite")
+        from django.utils import timezone
+        if value.check_out > timezone.now():
+            raise serializers.ValidationError("Puoi recensire solo dopo il check-out")
+        if Review.objects.filter(booking=value).exists():
+            raise serializers.ValidationError("Hai già recensito questa prenotazione")
+        return value
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        validated_data['accommodation'] = validated_data['booking'].accommodation
+        return super().create(validated_data)
 
 
 class AvailabilityCheckSerializer(serializers.Serializer):

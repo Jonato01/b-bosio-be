@@ -4,6 +4,7 @@ from .views import (
     UserViewSet, RoleViewSet, AccommodationViewSet,
     BookingViewSet, BookingGuestViewSet, BlockedPeriodViewSet,
     BlockedWeekdayViewSet, BookingAuditViewSet,
+    PaidServiceViewSet, PhotoViewSet, ReviewViewSet,
     check_availability, booking_statistics
 )
 
@@ -16,6 +17,9 @@ router.register(r'booking-guests', BookingGuestViewSet, basename='booking-guest'
 router.register(r'blocked-periods', BlockedPeriodViewSet, basename='blocked-period')
 router.register(r'blocked-weekdays', BlockedWeekdayViewSet, basename='blocked-weekday')
 router.register(r'booking-audit', BookingAuditViewSet, basename='booking-audit')
+router.register(r'paid-services', PaidServiceViewSet, basename='paid-service')
+router.register(r'photos', PhotoViewSet, basename='photo')
+router.register(r'reviews', ReviewViewSet, basename='review')
 
 urlpatterns = [
     path('', include(router.urls)),

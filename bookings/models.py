@@ -110,6 +110,9 @@ class Booking(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(null=True, blank=True)
+    selected_services = models.JSONField(default=list, blank=True, null=True)
+    reminder_sent = models.BooleanField(default=False)
+    review_reminder_sent = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'bookings'
@@ -209,3 +212,78 @@ class BookingAudit(models.Model):
 
     def __str__(self):
         return f"Audit: {self.action} - Booking {self.booking.id if self.booking else 'N/A'}"
+
+
+class PaidService(models.Model):
+    id = models.AutoField(primary_key=True, db_column='id')
+    accommodation = models.ForeignKey(
+        Accommodation, on_delete=models.CASCADE,
+        related_name='paid_services', db_column='accommodation_id'
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'paid_services'
+        managed = False
+
+    def __str__(self):
+        return f"{self.name} - {self.price}€"
+
+
+class Photo(models.Model):
+    UPLOAD_TYPE_CHOICES = [
+        ('accommodation', 'Accommodation'),
+        ('review', 'Review'),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    accommodation = models.ForeignKey(
+        Accommodation, on_delete=models.CASCADE,
+        related_name='photos', db_column='accommodation_id'
+    )
+    uploaded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        db_column='uploaded_by'
+    )
+    url = models.URLField(max_length=500)
+    upload_type = models.CharField(max_length=20, choices=UPLOAD_TYPE_CHOICES, default='accommodation')
+    caption = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'photos'
+        managed = False
+
+    def __str__(self):
+        return f"Photo {self.id} - {self.accommodation.title}"
+
+
+class Review(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    accommodation = models.ForeignKey(
+        Accommodation, on_delete=models.CASCADE,
+        related_name='reviews', db_column='accommodation_id'
+    )
+    booking = models.OneToOneField(
+        Booking, on_delete=models.CASCADE,
+        related_name='review', db_column='booking_id'
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        db_column='user_id'
+    )
+    rating = models.SmallIntegerField()
+    comment = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'reviews'
+        managed = False
+
+    def __str__(self):
+        return f"Review {self.id} - {self.rating}/5"

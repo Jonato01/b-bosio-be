@@ -85,7 +85,7 @@ from pathlib import Path as _Path
 from django.core.exceptions import ImproperlyConfigured
 from typing import Any, cast
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Helper: determine whether TLS is required
 _db_require_tls = os.getenv('DB_REQUIRE_TLS', 'False').lower() in ('1', 'true', 'yes')
@@ -195,6 +195,11 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ),
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
@@ -260,3 +265,23 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
+
+# Supabase Storage
+SUPABASE_URL = os.getenv('SUPABASE_URL', 'https://bzurrysgiczqgvvxpubm.supabase.co')
+SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY', '')
+SUPABASE_STORAGE_BUCKET = 'accommodation-photos'
+
+# File upload limits
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'B&Bosio <noreply@bbosio.com>')
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:4200')
