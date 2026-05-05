@@ -331,3 +331,26 @@ class AvailabilityCheckSerializer(serializers.Serializer):
             raise serializers.ValidationError("Check-out must be after check-in")
         return attrs
 
+
+class ConciergeRequestSerializer(serializers.Serializer):
+    question = serializers.CharField(max_length=500, trim_whitespace=True)
+    history = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        allow_empty=True,
+        max_length=10,
+    )
+
+    def validate_question(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("La domanda non puo' essere vuota")
+        return value
+
+
+class TravelerQuizSerializer(serializers.Serializer):
+    answers = serializers.ListField(
+        child=serializers.CharField(max_length=200, trim_whitespace=True),
+        min_length=1,
+        max_length=5,
+    )
+

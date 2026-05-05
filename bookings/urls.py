@@ -5,7 +5,7 @@ from .views import (
     BookingViewSet, BookingGuestViewSet, BlockedPeriodViewSet,
     BlockedWeekdayViewSet, BookingAuditViewSet,
     PaidServiceViewSet, PhotoViewSet, ReviewViewSet,
-    check_availability, booking_statistics
+    check_availability, booking_statistics, concierge_chat
 )
 
 router = DefaultRouter()
@@ -25,5 +25,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('check-availability/', check_availability, name='check-availability'),
     path('statistics/', booking_statistics, name='statistics'),
+    path('concierge/', concierge_chat, name='concierge-chat'),
 ]
 

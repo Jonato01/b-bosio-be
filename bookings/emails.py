@@ -1,8 +1,24 @@
 import logging
+from html import escape
 from django.conf import settings
 from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
+
+
+def _ai_block(text):
+    """Render AI narration as styled HTML block. Empty string if text is None/empty."""
+    if not text:
+        return ''
+    safe = escape(text).replace('\n', '<br>')
+    return f"""
+        <div style="margin-top: 16px; padding: 16px; border-left: 3px solid #ffd54f; background: #2a2a2a; border-radius: 4px;">
+            <div style="font-size: 12px; color: #ffd54f; font-weight: bold; margin-bottom: 8px;">
+                CONCIERGE IN ALLUMINIO ANODIZZATO DICE
+            </div>
+            <div style="color: #e0e0e0; font-style: italic; font-size: 14px;">{safe}</div>
+        </div>
+    """
 
 
 def _format_date(dt):
@@ -62,9 +78,17 @@ def send_new_booking_admin(booking):
 
 
 def send_booking_confirmed(booking):
-    """Notify customer that booking is confirmed."""
+    """Notify customer that booking is confirmed (with AI narration)."""
     if not booking.user or not booking.user.email:
         return False
+
+    # Feature A: narrazione AI con persona ingegnere alluminio-IKEA
+    narration = ''
+    try:
+        from .ai import welcome_narration
+        narration = welcome_narration(booking) or ''
+    except Exception:
+        logger.exception('welcome_narration failed, sending email without AI block')
 
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1e1e1e; color: #e0e0e0; padding: 24px; border-radius: 8px;">
@@ -76,11 +100,42 @@ def send_booking_confirmed(booking):
             <tr><td style="padding: 8px 0; color: #999;">Check-out:</td><td style="padding: 8px 0;">{_format_date(booking.check_out)}</td></tr>
             <tr><td style="padding: 8px 0; color: #999;">Ospiti:</td><td style="padding: 8px 0;">{booking.num_guests}</td></tr>
         </table>
+        {_ai_block(narration)}
         <p style="color: #999; font-size: 14px;">Ti aspettiamo! Se hai domande, contattaci.</p>
     </div>
     """
     return _send(
         f'Prenotazione confermata: {booking.accommodation.title}',
+        html,
+        [booking.user.email],
+    )
+
+
+def send_surprise_itinerary(booking, ai_html):
+    """Send AI-generated surprise itinerary to booking customer."""
+    if not booking.user or not booking.user.email:
+        return False
+    if not ai_html:
+        return False
+
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1e1e1e; color: #e0e0e0; padding: 24px; border-radius: 8px;">
+        <h2 style="color: #ffd54f; margin-top: 0;">Itinerario Sorpresa per il tuo soggiorno</h2>
+        <p>Il nostro concierge in alluminio anodizzato ha preparato qualcosa per te:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px 0; color: #999;">Alloggio:</td><td style="padding: 8px 0;"><strong>{booking.accommodation.title}</strong></td></tr>
+            <tr><td style="padding: 8px 0; color: #999;">Soggiorno:</td><td style="padding: 8px 0;">{_format_date(booking.check_in)} - {_format_date(booking.check_out)}</td></tr>
+        </table>
+        <div style="margin-top: 16px; padding: 16px; background: #2a2a2a; border-radius: 4px; line-height: 1.6;">
+            {ai_html}
+        </div>
+        <p style="color: #999; font-size: 12px; margin-top: 16px;">
+            Generato da AI con persona dedicata. Non sostituisce i consigli del personale.
+        </p>
+    </div>
+    """
+    return _send(
+        f'Itinerario sorpresa: {booking.accommodation.title}',
         html,
         [booking.user.email],
     )

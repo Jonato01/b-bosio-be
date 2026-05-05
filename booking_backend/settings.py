@@ -202,6 +202,12 @@ REST_FRAMEWORK = {
     ),
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'concierge': '10/min',
+    },
 }
 
 # JWT settings
@@ -232,18 +238,30 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # Per sviluppo - permetti tutte le origini
+FRONTEND_URL = os.getenv(
+    'FRONTEND_URL',
+    'https://angulae-fe-dfdhdkcacwbccrbq.francecentral-01.azurewebsites.net',
+)
 
-# In alternativa, usa questa configurazione più specifica:
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://localhost:3001",
-#     "http://localhost:8080",
-#     "http://127.0.0.1:3000",
-#     "http://127.0.0.1:8080",
-#     "http://localhost:5173",  # Vite
-#     "http://localhost:4200",  # Angular
-# ]
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:4200",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8080",
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.azurewebsites\.net$",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    FRONTEND_URL,
+    "https://*.azurewebsites.net",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -285,3 +303,8 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'B&Bosio <noreply@bbosio.com>')
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:4200')
+
+# Gemini AI (Google AI Studio - free tier)
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-flash-latest')
+GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '15'))
