@@ -1,7 +1,8 @@
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from datetime import datetime
 from .models import (
     User, Role, Accommodation, Booking, BookingGuest,
@@ -14,10 +15,15 @@ from .serializers import (
     BlockedWeekdaySerializer, BookingAuditSerializer, UserRegistrationSerializer,
     BookingCreateSerializer, AvailabilityCheckSerializer,
     PaidServiceSerializer, PhotoSerializer, PhotoUploadSerializer,
-    ReviewSerializer, ReviewCreateSerializer
+    ReviewSerializer, ReviewCreateSerializer,
+    ConciergeRequestSerializer, TravelerQuizSerializer
 )
 from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin
-from .emails import send_new_booking_admin, send_booking_confirmed, send_booking_rejected
+from .emails import (
+    send_new_booking_admin, send_booking_confirmed, send_booking_rejected,
+    send_surprise_itinerary,
+)
+from . import ai
 
 
 class RoleViewSet(viewsets.ReadOnlyModelViewSet):
@@ -381,6 +387,74 @@ class BookingViewSet(viewsets.ModelViewSet):
         audit_entries = BookingAudit.objects.filter(booking=booking).order_by('-created_at')
         serializer = BookingAuditSerializer(audit_entries, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='traveler-type',
+            permission_classes=[IsAuthenticated])
+    def traveler_type(self, request, pk=None):
+        """Feature C: classifica ospite con AI persona alluminio-IKEA."""
+        booking = self.get_object()
+        serializer = TravelerQuizSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = ai.traveler_type(serializer.validated_data['answers'])
+        if not result:
+            return Response(
+                {'error': 'AI non disponibile'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        BookingAudit.objects.create(
+            booking=booking,
+            action='traveler_quiz',
+            actor_user=request.user if request.user.is_authenticated else None,
+            data_json=result,
+        )
+        return Response(result)
+
+    @action(detail=True, methods=['post'], url_path='surprise-itinerary',
+            permission_classes=[IsAuthenticated])
+    def surprise_itinerary(self, request, pk=None):
+        """Feature D: itinerario sorpresa AI. Opzionale send_email=true."""
+        booking = self.get_object()
+        html = ai.surprise_itinerary(booking)
+        if not html:
+            return Response(
+                {'error': 'AI non disponibile'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        BookingAudit.objects.create(
+            booking=booking,
+            action='surprise_itinerary',
+            actor_user=request.user if request.user.is_authenticated else None,
+            data_json={'html': html},
+        )
+        send_email = str(request.query_params.get('send_email', '')).lower() == 'true'
+        emailed = False
+        if send_email:
+            emailed = bool(send_surprise_itinerary(booking, html))
+        return Response({'html': html, 'emailed': emailed})
+
+
+class ConciergeRateThrottle(AnonRateThrottle):
+    """Throttle dedicato all'endpoint concierge. Rate da settings DEFAULT_THROTTLE_RATES['concierge']."""
+    scope = 'concierge'
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([ConciergeRateThrottle])
+def concierge_chat(request):
+    """Feature B: concierge AI pubblico (throttled 10/min/IP)."""
+    serializer = ConciergeRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    reply = ai.concierge_reply(
+        serializer.validated_data['question'],
+        serializer.validated_data.get('history') or None,
+    )
+    if reply is None:
+        return Response(
+            {'error': 'AI non disponibile'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return Response({'reply': reply})
 
 
 class BookingGuestViewSet(viewsets.ModelViewSet):
